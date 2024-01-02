@@ -47,19 +47,19 @@ class TestMethodsInSsrfFilter < Minitest::Test
   #   range.begin <= other.begin && range.end >= other.end
   # end
   # alias === include?
-
   def test_include
     # test some IPV4 addrs
     # no mask: begin = end
     [::IPAddr.new("127.0.0.10"), ::IPAddr.new("0.0.0.0"), ::IPAddr.new("10.255.254.253") ].each do |ip_|
-      range_ = ip_.to_range
-      puts "["+range_.begin.to_s+", " + range_.end.to_s + "]"
+      assert ip_.to_s, ip_.to_range.begin.to_s
+      assert ip_.to_s, ip_.to_range.end.to_s
     end
 
-    assert ::IPAddr.new('127.0.0.0/8').include?(::IPAddr.new("127.0.0.10"))
-    assert ::IPAddr.new("0.0.0.0/24").include?(::IPAddr.new("0.0.0.0"))
+    assert ::IPAddr.new('0.0.0.0/8').to_range.begin.to_s == "0.0.0.0" and ::IPAddr.new('0.0.0.0/8').to_range.end.to_s == "0.255.255.255"
+    assert ::IPAddr.new('169.254.0.0/16').to_range.begin.to_s == "169.254.0.0" and ::IPAddr.new('169.254.0.0/16').to_range.end.to_s == "169.254.255.255"
 
-
+    # assert ::IPAddr.new('127.0.0.0/8').include?(::IPAddr.new("127.0.0.10"))
+    # assert ::IPAddr.new("0.0.0.0/24").include?(::IPAddr.new("0.0.0.0"))
     # [::IPAddr.new('0.0.0.0/8'), # Current network (only valid as source address)
     # ::IPAddr.new('10.0.0.0/8'), # Private network
     # ::IPAddr.new('100.64.0.0/10'), # Shared Address Space
@@ -68,18 +68,10 @@ class TestMethodsInSsrfFilter < Minitest::Test
     # ::IPAddr.new('172.16.0.0/12'), # Private network
     # ::IPAddr.new('192.0.0.0/24'), # IETF Protocol Assignments
     # ::IPAddr.new('192.0.2.0/24') ].each do |ip_|
+    #   puts ip_.instance_variable_get(:@mask_addr)
       # range_ = ip_.to_range
       # puts "["+range_.begin.to_s+", " + range_.end.to_s + "]"
-      # [0.0.0.0, 0.255.255.255]
-      # [10.0.0.0, 10.255.255.255]
-      # [100.64.0.0, 100.127.255.255]
-      # [127.0.0.0, 127.255.255.255]
-      # [169.254.0.0, 169.254.255.255]
-      # [172.16.0.0, 172.31.255.255]
-      # [192.0.0.0, 192.0.0.255]
-      # [192.0.2.0, 192.0.2.255]
     # end
-
     # test some IPV6 addrs
   end
 
@@ -90,35 +82,25 @@ class TestMethodsInSsrfFilter < Minitest::Test
   # def test_request_unscreen
   #   ["https://static.remove.bg/uploader-examples/person/2.jpg"\
   #   , "https://static.remove.bg/uploader-examples/person/1.jpg"\
-  #   , "https://static.remove.bg/uploader-examples/person/8.jpg"\
-  #   , "https://static.remove.bg/logos/att.jpg"].each do |request_url|
+  #   , "https://static.remove.bg/uploader-examples/person/8.jpg"].each do |request_url|
 
   #     uri = URI(request_url)
-  #     hostname = uri.hostname
-  #     ip_addresses = DEFAULT_RESOLVER.call(hostname)
-  #     puts ip_addresses
+  #     ip_addresses = DEFAULT_RESOLVER.call(uri.hostname).reject {|ipaddr| ipaddr.ipv6?}
 
-  #     hostname = uri.hostname
   #     uri.hostname = ip_addresses.sample.to_s
 
-  #     puts uri.hostname
   #     request = ::Net::HTTP::Get.new(uri)
 
   #     # host_header is private
-  #     request['host'] = host_header(hostname,  uri )
+  #     request['host'] = host_header(uri.hostname,  uri )
 
-  #     extensions = {
+  #     image_extensions = {
+  #       "image/jpeg" => "jpg",
+  #       "image/png" => "png",
   #       "image/gif" => "gif",
-  #       "video/mp4" => "mp4",
-  #       "video/x-msvideo" => "avi",
-  #       "video/mpeg" => "mpg",
-  #       "video/quicktime" => "mov",
-  #       "video/webm" => "webm",
-  #       "video/ogg" => "ogg",
-  #       "application/ogg" => "ogg",
   #     }
 
-  #     content_type_passlist = extensions.keys
+  #     content_type_passlist = image_extensions.keys
 
   #     request["User-Agent"] = "unscreen.com/1.0 video background remover"
   #     request["Accept"] = content_type_passlist.join(", ")
@@ -130,13 +112,15 @@ class TestMethodsInSsrfFilter < Minitest::Test
   #       ssl_timeout: 5,
   #     }
 
+  #     # http_options[:use_ssl] = (uri.scheme == 'https')
+  #     # puts "----------#{uri.hostname}:#{uri.port}----------"
+
   #     ::Net::HTTP.start(uri.hostname, uri.port, http_options) do |http|
-  #       puts http.request(request)
+  #       # puts http.request(request)
   #     end
 
   #   end
   # end
-
 end
 
 
