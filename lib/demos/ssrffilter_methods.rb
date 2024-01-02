@@ -1,5 +1,9 @@
 require 'resolv'
 
+DEFAULT_RESOLVER = proc do |hostname|
+  ::Resolv.getaddresses(hostname).map { |ip| ::IPAddr.new(ip) }
+end
+
 def host_header(hostname, uri)
   # Attach port for non-default as per RFC2616
   if (uri.port == 80 && uri.scheme == 'http') ||
@@ -10,6 +14,7 @@ def host_header(hostname, uri)
   end
 end
 
-DEFAULT_RESOLVER = proc do |hostname|
-  ::Resolv.getaddresses(hostname).map { |ip| ::IPAddr.new(ip) }
+def ipaddr_has_mask?(ipaddr)
+  range = ipaddr.to_range
+  range.first != range.last
 end

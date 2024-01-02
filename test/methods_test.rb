@@ -20,6 +20,25 @@ class TestMethodsInSsrfFilter < Minitest::Test
       # end
   end
 
+  # IP that has mask is rejected (when range.begin != range.end)
+  # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L155
+  # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L146
+  def test_IP_mask
+    assert ::IPAddr.new('0.0.0.0/8').instance_variable_get(:@mask_addr).to_s(16) == "ff000000"
+    assert ::IPAddr.new('169.254.0.0/16').instance_variable_get(:@mask_addr).to_s(16) == "ffff0000"
+
+    assert ::IPAddr.new('0.0.0.0/8').to_range.begin.to_s == "0.0.0.0" and ::IPAddr.new('0.0.0.0/8').to_range.end.to_s == "0.255.255.255"
+    assert ::IPAddr.new('169.254.0.0/16').to_range.begin.to_s == "169.254.0.0" and ::IPAddr.new('169.254.0.0/16').to_range.end.to_s == "169.254.255.255"
+
+    ips_no_mask = ['169.254.0.0/32', '127.0.0.3']
+    ips_no_mask.each do |ip_str|
+      ip_ = ::IPAddr.new(ip_str)
+      assert ip_.instance_variable_get(:@mask_addr).to_s(16) == "ffffffff"
+      assert ip_.to_range.begin.to_s == ip_.to_range.end.to_s
+      assert !ipaddr_has_mask?(ip_)
+    end
+  end
+
   # whitelist allows only http and https
   # scheme must be http or https, otherwise ssrf_fiter will raise an error
   # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L118
@@ -54,10 +73,6 @@ class TestMethodsInSsrfFilter < Minitest::Test
       assert ip_.to_s, ip_.to_range.begin.to_s
       assert ip_.to_s, ip_.to_range.end.to_s
     end
-
-    # has mask:
-    assert ::IPAddr.new('0.0.0.0/8').to_range.begin.to_s == "0.0.0.0" and ::IPAddr.new('0.0.0.0/8').to_range.end.to_s == "0.255.255.255"
-    assert ::IPAddr.new('169.254.0.0/16').to_range.begin.to_s == "169.254.0.0" and ::IPAddr.new('169.254.0.0/16').to_range.end.to_s == "169.254.255.255"
 
 
     # assert ::IPAddr.new('127.0.0.0/8').include?(::IPAddr.new("127.0.0.10"))
@@ -124,7 +139,6 @@ class TestMethodsInSsrfFilter < Minitest::Test
   #   end
   # end
 end
-
 
 # test on the ip address of remove.bg
 # https://whatismyipaddress.com/hostname-ip
