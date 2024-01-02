@@ -55,8 +55,10 @@ class TestMethodsInSsrfFilter < Minitest::Test
       assert ip_.to_s, ip_.to_range.end.to_s
     end
 
+    # has mask:
     assert ::IPAddr.new('0.0.0.0/8').to_range.begin.to_s == "0.0.0.0" and ::IPAddr.new('0.0.0.0/8').to_range.end.to_s == "0.255.255.255"
     assert ::IPAddr.new('169.254.0.0/16').to_range.begin.to_s == "169.254.0.0" and ::IPAddr.new('169.254.0.0/16').to_range.end.to_s == "169.254.255.255"
+
 
     # assert ::IPAddr.new('127.0.0.0/8').include?(::IPAddr.new("127.0.0.10"))
     # assert ::IPAddr.new("0.0.0.0/24").include?(::IPAddr.new("0.0.0.0"))
