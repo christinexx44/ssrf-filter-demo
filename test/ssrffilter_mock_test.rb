@@ -13,8 +13,16 @@ class TestSsrfFilter < Minitest::Test
 
   # 2606:4700:20::681a:344:443 doesn't work
   # 2606:4700:20::ac43:4724:443 doesn't work
-  def test_get_method
-    response_ =  ssrf_get("https://static.remove.bg/uploader-examples/person/5.jpg")
+  def test_get_method_image
+    image_extensions = {
+      "image/jpeg" => "jpg",
+      "image/png" => "png",
+      "image/gif" => "gif",
+    }
+
+    content_type_passlist = image_extensions.keys
+
+    response_ =  ssrf_get("https://static.remove.bg/uploader-examples/person/5.jpg", content_type_passlist)
     assert response_.is_a?(Net::HTTPOK)
     assert response_.code, 200
   end

@@ -103,48 +103,50 @@ class TestMethodsInSsrfFilter < Minitest::Test
   # the response is processed by the block (:stream)
   # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L118
   # here just print the response of some urls
-  # def test_request_unscreen
-  #   ["https://static.remove.bg/uploader-examples/person/2.jpg"\
-  #   , "https://static.remove.bg/uploader-examples/person/1.jpg"\
-  #   , "https://static.remove.bg/uploader-examples/person/8.jpg"].each do |request_url|
 
-  #     uri = URI(request_url)
-  #     ip_addresses = DEFAULT_RESOLVER.call(uri.hostname).reject {|ipaddr| ipaddr.ipv6?}
+  # in unscreen: there are 3 keys in option{}: headers, http_option, stream
+  # and here they are directly passed in fetch_once
+  # images are tested here
+  # get method is tested
+  def test_fetch_unscreen_image
+    image_extensions = {
+      "image/jpeg" => "jpg",
+      "image/png" => "png",
+      "image/gif" => "gif",
+    }
 
-  #     uri.hostname = ip_addresses.sample.to_s
+    content_type_passlist = image_extensions.keys
 
-  #     request = ::Net::HTTP::Get.new(uri)
+    ["https://static.remove.bg/uploader-examples/person/2.jpg"\
+    , "https://static.remove.bg/uploader-examples/person/1.jpg"\
+    , "https://static.remove.bg/uploader-examples/person/8.jpg"].each do |request_url|
 
-  #     # host_header is private
-  #     request['host'] = host_header(uri.hostname,  uri )
+      uri = URI(request_url)
 
-  #     image_extensions = {
-  #       "image/jpeg" => "jpg",
-  #       "image/png" => "png",
-  #       "image/gif" => "gif",
-  #     }
+      # 
+      ip_addresses = DEFAULT_RESOLVER.call(uri.hostname).reject {|ip| ip.ipv6?}
 
-  #     content_type_passlist = image_extensions.keys
+      # puts "ip addresses are #{ip_addresses.join(' ')}-------------------"
 
-  #     request["User-Agent"] = "unscreen.com/1.0 video background remover"
-  #     request["Accept"] = content_type_passlist.join(", ")
+      fetch_once(uri, ip_addresses.sample.to_s, :get,
+      headers: {
+        "User-Agent" => "unscreen.com/1.0 video background remover",
+        "Accept" => content_type_passlist.join(", "),
+      }, http_options: {
+        open_timeout: 5,
+        read_timeout: 5,
+        write_timeout: 5,
+        ssl_timeout: 5,
+      }, stream: proc do |resp|
+        puts resp
+      end)
+    end
+  end
 
-  #     http_options =   {
-  #       open_timeout: 5,
-  #       read_timeout: 5,
-  #       write_timeout: 5,
-  #       ssl_timeout: 5,
-  #     }
 
-  #     # http_options[:use_ssl] = (uri.scheme == 'https')
-  #     # puts "----------#{uri.hostname}:#{uri.port}----------"
+  def test_fetch_removebg
+  end
 
-  #     ::Net::HTTP.start(uri.hostname, uri.port, http_options) do |http|
-  #       # puts http.request(request)
-  #     end
-
-  #   end
-  # end
 end
 
 # test on the ip address of remove.bg

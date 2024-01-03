@@ -1,14 +1,6 @@
 require 'ssrf_filter'
 
-def ssrf_get(url)
-  image_extensions = {
-    "image/jpeg" => "jpg",
-    "image/png" => "png",
-    "image/gif" => "gif",
-  }
-
-  content_type_passlist = image_extensions.keys
-
+def ssrf_get(url, content_type_passlist)
   SsrfFilter.get(
     url ,
     headers: {
