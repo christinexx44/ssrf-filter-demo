@@ -1,6 +1,6 @@
 require 'ssrf_filter'
 
-def ssrf_get (url)
+def ssrf_get(url)
   image_extensions = {
     "image/jpeg" => "jpg",
     "image/png" => "png",
@@ -21,31 +21,8 @@ def ssrf_get (url)
       write_timeout: 5,
       ssl_timeout: 5,
   })
-
-
-    # stream: proc do |response|
-    #   status = response.code.to_i
-    #   raise DownloadFailed, "Failed to download file (code #{status})" unless status >= 200 && status <= 299
-
-    #   file_size_known = response["content-length"].present?
-    #   file_size = response["content-length"].to_i if file_size_known
-    #   raise DownloadFailed, "File too large (#{file_size} bytes exceeds limit of #{max_size} bytes)" if file_size_known && file_size > max_size
-
-    #   content_type = response["content-type"]
-    #   raise DownloadFailed, "Invalid file type (#{content_type})" unless content_type_passlist.include?(content_type)
-
-    #   bytes_downloaded = 0
-
-    #   File.open target_path, "wb" do |io|
-    #     response.read_body do |chunk|
-    #       io.write chunk
-    #       bytes_downloaded += chunk.size
-    #     end
-    #     raise DownloadFailed, "File too large (#{file_size} bytes exceeds limit of #{max_size} bytes)" if bytes_downloaded > max_size
-    #   end
-    # end
-
 end
 
-def ssrf_post
+def ssrf_post(url)
+  SsrfFilter.post(url)
 end

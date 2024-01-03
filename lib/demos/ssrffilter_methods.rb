@@ -1,9 +1,13 @@
 require 'resolv'
+require 'ssrf_filter'
 
-DEFAULT_RESOLVER = proc do |hostname|
-  ::Resolv.getaddresses(hostname).map { |ip| ::IPAddr.new(ip) }
-end
+IPV4_blacklist_ssrf = SsrfFilter.const_get :IPV4_BLACKLIST
+IPV6_blacklist_ssrf = SsrfFilter.const_get :IPV6_BLACKLIST
+DEFAULT_RESOLVER =  SsrfFilter.const_get :DEFAULT_RESOLVER
+DEFAULT_SCHEME_WHITELIST =  SsrfFilter.const_get :DEFAULT_SCHEME_WHITELIST
 
+
+# the methods are private in SsrfFilter, so I just copied them here
 def host_header(hostname, uri)
   # Attach port for non-default as per RFC2616
   if (uri.port == 80 && uri.scheme == 'http') ||

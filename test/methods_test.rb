@@ -1,8 +1,6 @@
 require "test_helper"
 
 class TestMethodsInSsrfFilter < Minitest::Test
-  DEFAULT_SCHEME_WHITELIST = %w[http https].freeze
-
   def test_getaddresses
       # ::Resolv.getaddress is called in DEFAULT_RESOLVER
       # getaddresses will return an array resolved by the given hostname
@@ -11,13 +9,9 @@ class TestMethodsInSsrfFilter < Minitest::Test
       # UnresolvedHostname will be raised here
       # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L124
       ["127.000.000.01", "0x7f", "008.08.8.8", \
-      "2130706433", "017700000001", "3232235521","3232235777", "0x7f000001", "0xc0a80014" ].each do |host_name|
+      "2130706433", "017700000001", "3232235521","3232235777", "0x7f000001", "0xc0a80014", "[::ffff:127.0.0.1]", "[0:0:0:0:0:ffff:127.0.0.1]" ].each do |host_name|
         assert 0, ::Resolv.getaddresses(host_name).length()
       end
-
-      # [  "0.0.0.0", "0.0.0.0"].each do |host_name|
-      #   puts ::Resolv.getaddresses(host_name)
-      # end
   end
 
   # IP that has mask is rejected (when range.begin != range.end)
@@ -53,11 +47,11 @@ class TestMethodsInSsrfFilter < Minitest::Test
     assert true
   end
 
-  # used in self.unsafe_ip_address? (ip_address)
-  # in ruby 3.2 (which is specified the README in remove-bg-web), include?
+  # used in self.unsafe_ip_address?(ip_address)
   # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L148
   # if unsafe_ip_address evaluates to true, the corresponding ip_address will be removed from the set
 
+  # in ruby 3.2, include? is defined as
   # def include?(other)
   #   other = coerce_other(other)
   #   return false unless other.family == family
@@ -90,6 +84,16 @@ class TestMethodsInSsrfFilter < Minitest::Test
       # puts "["+range_.begin.to_s+", " + range_.end.to_s + "]"
     # end
     # test some IPV6 addrs
+  end
+
+  # from the DEFAULT_RESOLVER used in ssrf-filter, the initialise method of IPAddr:
+  # ::IPAddr.new(ip) is called
+  # to create IP from the hostname
+  # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L70C36-L71C1
+  def test_initialise_IPAddr
+    ["127.0.0.1", "[0:0:0:0:0:ffff:127.0.0.1]", "[::ffff:127.0.0.1]"].each do |ip_str|
+      # puts ::IPAddr.new(ip_str)
+    end
   end
 
   # creating a request based on the method is used in fetch_once within ssrf_filter.get
