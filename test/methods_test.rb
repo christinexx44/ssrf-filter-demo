@@ -1,15 +1,16 @@
 require "test_helper"
 
 class TestMethodsInSsrfFilter < Minitest::Test
+  # ::Resolv.getaddress is called in DEFAULT_RESOLVER
+  # getaddresses will return an array resolved by the given hostname
+  # for the following domain name that may be resolved as "localhost",
+  # .getaddresses) will return an empty list
+  # UnresolvedHostname will be raised here
+  # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L124
   def test_getaddresses
-      # ::Resolv.getaddress is called in DEFAULT_RESOLVER
-      # getaddresses will return an array resolved by the given hostname
-      # for the following domain name that may be resolved as "localhost",
-      # .getaddress() will return an empty list
-      # UnresolvedHostname will be raised here
-      # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L124
       ["127.000.000.01", "0x7f", "008.08.8.8", \
-      "2130706433", "017700000001", "3232235521","3232235777", "0x7f000001", "0xc0a80014", "[::ffff:127.0.0.1]", "[0:0:0:0:0:ffff:127.0.0.1]" ].each do |host_name|
+      "2130706433", "017700000001", "3232235521","3232235777", "0x7f000001", "0xc0a80014", "[::ffff:127.0.0.1]",\
+       "[0:0:0:0:0:ffff:127.0.0.1]" ].each do |host_name|
         assert 0, ::Resolv.getaddresses(host_name).length()
       end
   end
@@ -19,10 +20,14 @@ class TestMethodsInSsrfFilter < Minitest::Test
   # https://github.com/remove-bg/ssrf_filter/blob/3136dbc8d01fba258eebedba614902964e13d455/lib/ssrf_filter/ssrf_filter.rb#L146
   def test_IP_mask
     assert ::IPAddr.new('0.0.0.0/8').instance_variable_get(:@mask_addr).to_s(16) == "ff000000"
-    assert ::IPAddr.new('169.254.0.0/16').instance_variable_get(:@mask_addr).to_s(16) == "ffff0000"
+    assert ::IPAddr.new('0.0.0.0/8').to_range.begin.to_s == "0.0.0.0" \
+    and ::IPAddr.new('0.0.0.0/8').to_range.end.to_s == "0.255.255.255"
+    assert ipaddr_has_mask?(::IPAddr.new('0.0.0.0/8'))
 
-    assert ::IPAddr.new('0.0.0.0/8').to_range.begin.to_s == "0.0.0.0" and ::IPAddr.new('0.0.0.0/8').to_range.end.to_s == "0.255.255.255"
-    assert ::IPAddr.new('169.254.0.0/16').to_range.begin.to_s == "169.254.0.0" and ::IPAddr.new('169.254.0.0/16').to_range.end.to_s == "169.254.255.255"
+    assert ::IPAddr.new('169.254.0.0/16').instance_variable_get(:@mask_addr).to_s(16) == "ffff0000"
+    assert ::IPAddr.new('169.254.0.0/16').to_range.begin.to_s == "169.254.0.0" \
+    and ::IPAddr.new('169.254.0.0/16').to_range.end.to_s == "169.254.255.255"
+    assert ipaddr_has_mask?(::IPAddr.new('169.254.0.0/16'))
 
     ips_no_mask = ['169.254.0.0/32', '127.0.0.3']
     ips_no_mask.each do |ip_str|
@@ -68,22 +73,20 @@ class TestMethodsInSsrfFilter < Minitest::Test
       assert ip_.to_s, ip_.to_range.end.to_s
     end
 
+    testing_proc = -> (prefix, num) {
+      ::IPAddr.new(prefix + num.to_s)
+    }
 
-    # assert ::IPAddr.new('127.0.0.0/8').include?(::IPAddr.new("127.0.0.10"))
-    # assert ::IPAddr.new("0.0.0.0/24").include?(::IPAddr.new("0.0.0.0"))
-    # [::IPAddr.new('0.0.0.0/8'), # Current network (only valid as source address)
-    # ::IPAddr.new('10.0.0.0/8'), # Private network
-    # ::IPAddr.new('100.64.0.0/10'), # Shared Address Space
-    # ::IPAddr.new('127.0.0.0/8'), # Loopback
-    # ::IPAddr.new('169.254.0.0/16'), # Link-local
-    # ::IPAddr.new('172.16.0.0/12'), # Private network
-    # ::IPAddr.new('192.0.0.0/24'), # IETF Protocol Assignments
-    # ::IPAddr.new('192.0.2.0/24') ].each do |ip_|
-    #   puts ip_.instance_variable_get(:@mask_addr)
-      # range_ = ip_.to_range
-      # puts "["+range_.begin.to_s+", " + range_.end.to_s + "]"
-    # end
-    # test some IPV6 addrs
+    (0..255).map { |num| testing_proc.call("127.0.0.", num)}.each do |ip|
+      [::IPAddr.new('127.0.0.0/24'), ::IPAddr.new('127.0.3.0/16')].each do |ip_|
+        assert ip_.include?(ip)
+      end
+
+      [::IPAddr.new('127.0.2.0/24')].each do |ip_|
+        assert !ip_.include?(ip)
+      end
+    end
+    # TODO: test some IPV6 addrs
   end
 
   # from the DEFAULT_RESOLVER used in ssrf-filter, the initialise method of IPAddr:
